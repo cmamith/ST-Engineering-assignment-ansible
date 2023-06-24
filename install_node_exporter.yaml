@@ -1,0 +1,45 @@
+---
+- name: Install Prometheus Node Exporter
+  hosts: ubuntu_vms
+  become: true
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - curl
+        - gnupg2
+
+    - name: Add Node Exporter GPG key
+      apt_key:
+        url: https://raw.githubusercontent.com/prometheus/node_exporter/r{{ node_exporter_version }}/util/keys/keyring.gpg
+
+    - name: Add Node Exporter repository
+      apt_repository:
+        repo: "deb https://packages.prometheus.io/apt/ubuntu {{ ansible_distribution_release }} main"
+        state: present
+
+    - name: Install Node Exporter
+      apt:
+        name: "prometheus-node-exporter={{ node_exporter_version }}"
+        state: present
+
+    - name: Configure Node Exporter service
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: Restart Node Exporter service
+      systemd:
+        name: node_exporter
+        state: restarted
